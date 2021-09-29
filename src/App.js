@@ -7,8 +7,10 @@ const Page = styled.div`
 	display: flex;
 	height: 100vh;
 	width: 100%;
+	padding: 30px 0px;
 	align-items: center;
 	background-color: #46516e;
+	color: white;
 	flex-direction: column;
 `;
 
@@ -100,7 +102,9 @@ const PartnerMessage = styled.div`
 `;
 
 const App = () => {
-	const [yourID, setYourID] = useState();
+	const [name, setName] = useState('');
+	const [userID, setUserID] = useState();
+	const [socketId, setSocketId] = useState();
 	const [messages, setMessages] = useState([]);
 	const [message, setMessage] = useState('');
 	const [file, setFile] = useState(null);
@@ -118,8 +122,20 @@ const App = () => {
 		});
 		//
 
-		socketRef.current.on('connect', () => {
-			setYourID(socketRef.current.id);
+		// socketRef.current.on('connect', () => {
+		// 	setUserID(socketRef.current.id);
+		// 	console.log('Socket', socketRef);
+		// });
+
+		socketRef.current.on('connectionSuccess', (data) => {
+			const { uId, username, socketId } = data;
+
+			console.log('Socket', socketRef);
+
+			setUserID(uId);
+			setSocketId(socketId);
+			setName(username);
+
 			console.log('Socket', socketRef);
 		});
 
@@ -136,12 +152,14 @@ const App = () => {
 	function sendMessage(e) {
 		e.preventDefault();
 
+		let receiverId = prompt('Receiver Id');
+
 		let messageObject;
 
 		if (file) {
 			messageObject = {
 				body: file,
-				id: yourID,
+				id: userID,
 				type: 'file',
 				mimeType: file.mimeType,
 				fileName: file.name,
@@ -152,7 +170,8 @@ const App = () => {
 			}
 			messageObject = {
 				body: message,
-				id: yourID,
+				id: userID,
+				receiverId,
 			};
 		}
 
@@ -174,9 +193,17 @@ const App = () => {
 
 	return (
 		<Page>
+			<div>
+				<span>Name:- {name}</span>
+				<br />
+				<span>UserId:- {userID}</span>
+				<br />
+				<span>SocketId:- {socketId}</span>
+				<br />
+			</div>
 			<Container>
 				{messages.map((message, index) => {
-					if (message.id === yourID) {
+					if (message.id === userID) {
 						return (
 							<MyRow key={index}>
 								{message.type === 'file' ? (
