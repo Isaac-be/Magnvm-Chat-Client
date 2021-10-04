@@ -1,17 +1,52 @@
 import React, { useState, useEffect, useRef } from 'react';
+import './App.css';
 import styled from 'styled-components';
 import io from 'socket.io-client';
 import ImageMsg from './ImageMsg';
 
 const Page = styled.div`
 	display: flex;
+	width: 70vw;
 	height: 100vh;
-	width: 100%;
+`;
+
+const SelectedUserForChat = styled.div`
+	display: flex;
+	width: 25%;
 	padding: 30px 0px;
 	align-items: center;
-	background-color: #46516e;
+	justify-content: center;
 	color: white;
 	flex-direction: column;
+	background-color: #3e455a;
+`;
+
+const ChatBox = styled.div`
+	display: flex;
+	width: 50%;
+	padding: 30px 0px;
+	align-items: center;
+	color: white;
+	flex-direction: column;
+`;
+const UsersList = styled.ul`
+	display: flex;
+	width: 25%;
+	padding: 30px 0px;
+	padding-inline-start: 0px;
+	margin: 0px;
+	list-style-type: none;
+	justify-content: center;
+	background-color: #3e455a;
+	color: white;
+	flex-direction: column;
+	text-align: center;
+	li {
+		cursor: pointer;
+		background-color: #a3acc9;
+		margin-bottom: 10px;
+		padding: 10px;
+	}
 `;
 
 const Container = styled.div`
@@ -105,6 +140,8 @@ const App = () => {
 	const [name, setName] = useState('');
 	const [userID, setUserID] = useState();
 	const [socketId, setSocketId] = useState();
+	const [onlineUsers, setOnlineUsers] = useState([]);
+	const [selectedUser, setSelectedUser] = useState(null);
 	const [messages, setMessages] = useState([]);
 	const [message, setMessage] = useState('');
 	const [file, setFile] = useState(null);
@@ -128,15 +165,30 @@ const App = () => {
 		// });
 
 		socketRef.current.on('connectionSuccess', (data) => {
-			const { uId, username, socketId } = data;
+			const { _id, username, socketId } = data;
 
+			console.log('========== Connection Success ===============');
 			console.log('Socket', socketRef);
+			console.log('========== Connection Success ===============');
 
-			setUserID(uId);
+			setUserID(_id);
 			setSocketId(socketId);
 			setName(username);
 
 			console.log('Socket', socketRef);
+		});
+
+		socketRef.current.on('user connected', (data) => {
+			console.log('========== User connected ===============');
+			console.log(data);
+			console.log('========== User connected ===============');
+			setOnlineUsers(data.onlineUsers);
+		});
+
+		socketRef.current.on('Joined ChatRoom', (data) => {
+			console.log('========== Joined ChatRoom ===============');
+			console.log(data);
+			console.log('========== Joined ChatRoom ===============');
 		});
 
 		socketRef.current.on('message', (message) => {
@@ -152,13 +204,13 @@ const App = () => {
 	function sendMessage(e) {
 		e.preventDefault();
 
-		let receiverId = prompt('Receiver Id');
+		let chatRoom = prompt('Your chatRoom Id');
 
 		let messageObject;
 
 		if (file) {
 			messageObject = {
-				body: file,
+				content: file,
 				id: userID,
 				type: 'file',
 				mimeType: file.mimeType,
@@ -169,9 +221,9 @@ const App = () => {
 				return;
 			}
 			messageObject = {
-				body: message,
-				id: userID,
-				receiverId,
+				content: message,
+				receiver: selectedUser._id,
+				chatRoom,
 			};
 		}
 
@@ -191,49 +243,77 @@ const App = () => {
 		setFile(file);
 	}
 
+	const handleSelectedUser = (user) => {
+		setSelectedUser(user);
+		socketRef.current.emit('Join ChatRoom', {
+			friendId: user._id,
+		});
+	};
+
 	return (
 		<Page>
-			<div>
-				<span>Name:- {name}</span>
-				<br />
-				<span>UserId:- {userID}</span>
-				<br />
-				<span>SocketId:- {socketId}</span>
-				<br />
-			</div>
-			<Container>
-				{messages.map((message, index) => {
-					if (message.id === userID) {
+			<SelectedUserForChat>
+				<h3>Selected ChatRoom User</h3>
+				{selectedUser && (
+					<div>
+						<h4>{selectedUser._id}</h4>
+						<h4>{selectedUser.name}</h4>
+					</div>
+				)}
+			</SelectedUserForChat>
+			<ChatBox>
+				<div>
+					<span>Name:- {name}</span>
+					<br />
+					<span>UserId:- {userID}</span>
+					<br />
+					<span>SocketId:- {socketId}</span>
+					<br />
+				</div>
+				<Container>
+					{messages.map((message, index) => {
+						if (message.sender === userID) {
+							return (
+								<MyRow key={index}>
+									{message.type === 'file' ? (
+										<ImageMsg message={message} />
+									) : (
+										<MyMessage>{message.content}</MyMessage>
+									)}
+								</MyRow>
+							);
+						}
 						return (
-							<MyRow key={index}>
+							<PartnerRow key={index}>
 								{message.type === 'file' ? (
 									<ImageMsg message={message} />
 								) : (
-									<MyMessage>{message.body}</MyMessage>
+									<PartnerMessage>{message.content}</PartnerMessage>
 								)}
-							</MyRow>
+							</PartnerRow>
 						);
-					}
-					return (
-						<PartnerRow key={index}>
-							{message.type === 'file' ? (
-								<ImageMsg message={message} />
-							) : (
-								<PartnerMessage>{message.body}</PartnerMessage>
-							)}
-						</PartnerRow>
-					);
-				})}
-			</Container>
-			<Form onSubmit={sendMessage}>
-				<TextArea
-					value={message}
-					onChange={handleChange}
-					placeholder='Say something...'
-				/>
-				<input type='file' onChange={handleFile} accept='image/*' />
-				<Button>Send</Button>
-			</Form>
+					})}
+				</Container>
+				<Form onSubmit={sendMessage}>
+					<TextArea
+						value={message}
+						onChange={handleChange}
+						placeholder='Say something...'
+					/>
+					<input type='file' onChange={handleFile} accept='image/*' />
+					<Button>Send</Button>
+				</Form>
+			</ChatBox>
+			<UsersList>
+				<h3>Online Users</h3>
+				{Object.values(onlineUsers)
+					.filter((u) => u._id !== userID)
+					.map((user) => (
+						<li key={user._id} onClick={() => handleSelectedUser(user)}>
+							{user.name}
+						</li>
+					))}
+			</UsersList>
 		</Page>
 	);
 };

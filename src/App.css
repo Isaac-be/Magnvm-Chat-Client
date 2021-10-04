@@ -1,5 +1,13 @@
-input , button {
-  margin: 10px;
-  padding: 5px;
-  border: 1px solid;
+#root {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: #46516e;
+}
+
+input,
+button {
+	margin: 10px;
+	padding: 5px;
+	border: 1px solid;
 }
