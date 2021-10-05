@@ -206,6 +206,11 @@ const App = () => {
 
 		let chatRoom = prompt('Your chatRoom Id');
 
+		if (!chatRoom) {
+			alert('Message not sent as no chatRoom id is provided');
+			return;
+		}
+
 		let messageObject;
 
 		if (file) {
@@ -250,6 +255,14 @@ const App = () => {
 		});
 	};
 
+	const updateMessage = (messageId, messageStatus) => {
+		console.log(messageStatus);
+		socketRef.current.emit('update message', {
+			messageId,
+			status: messageStatus ? false : true,
+		});
+	};
+
 	return (
 		<Page>
 			<SelectedUserForChat>
@@ -288,7 +301,21 @@ const App = () => {
 								{message.type === 'file' ? (
 									<ImageMsg message={message} />
 								) : (
-									<PartnerMessage>{message.content}</PartnerMessage>
+									<PartnerMessage>
+										{message.content}
+										<button
+											onClick={() => updateMessage(message._id, null)}
+											style={{ marginLeft: '10px', color: 'green' }}
+										>
+											Mark As Read
+										</button>
+										<button
+											onClick={() => updateMessage(message._id, 123)}
+											style={{ marginLeft: '10px', color: 'green' }}
+										>
+											Mark As Unread
+										</button>
+									</PartnerMessage>
 								)}
 							</PartnerRow>
 						);
