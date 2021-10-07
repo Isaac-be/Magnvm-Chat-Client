@@ -6,13 +6,13 @@ import ImageMsg from './ImageMsg';
 
 const Page = styled.div`
 	display: flex;
-	width: 70vw;
+	width: 100vw;
 	height: 100vh;
 `;
 
 const SelectedUserForChat = styled.div`
 	display: flex;
-	width: 25%;
+	width: 20%;
 	padding: 30px 0px;
 	align-items: center;
 	justify-content: center;
@@ -23,7 +23,7 @@ const SelectedUserForChat = styled.div`
 
 const ChatBox = styled.div`
 	display: flex;
-	width: 50%;
+	width: 60%;
 	padding: 30px 0px;
 	align-items: center;
 	color: white;
@@ -31,7 +31,7 @@ const ChatBox = styled.div`
 `;
 const UsersList = styled.ul`
 	display: flex;
-	width: 25%;
+	width: 20%;
 	padding: 30px 0px;
 	padding-inline-start: 0px;
 	margin: 0px;
@@ -55,7 +55,7 @@ const Container = styled.div`
 	height: 500px;
 	max-height: 500px;
 	overflow: auto;
-	width: 400px;
+	width: 90%;
 	border: 1px solid lightgray;
 	border-radius: 10px;
 	padding-bottom: 10px;
@@ -92,7 +92,7 @@ const Button = styled.button`
 `;
 
 const Form = styled.form`
-	width: 400px;
+	width: 90%;
 `;
 
 const MyRow = styled.div`
@@ -140,8 +140,9 @@ const App = () => {
 	const [name, setName] = useState('');
 	const [userID, setUserID] = useState();
 	const [socketId, setSocketId] = useState();
-	const [onlineUsers, setOnlineUsers] = useState([]);
+	const [myFollowings, setMyFollowings] = useState([]);
 	const [selectedUser, setSelectedUser] = useState(null);
+	const [selectedChatRoomId, setSelectedChatRoomId] = useState(null);
 	const [messages, setMessages] = useState([]);
 	const [message, setMessage] = useState('');
 	const [file, setFile] = useState(null);
@@ -165,15 +166,17 @@ const App = () => {
 		// });
 
 		socketRef.current.on('connectionSuccess', (data) => {
-			const { _id, username, socketId } = data;
+			const { _id, username, socketId, followings } = data;
 
 			console.log('========== Connection Success ===============');
 			console.log('Socket', socketRef);
+			console.log(data);
 			console.log('========== Connection Success ===============');
 
 			setUserID(_id);
 			setSocketId(socketId);
 			setName(username);
+			setMyFollowings(followings);
 
 			console.log('Socket', socketRef);
 		});
@@ -182,12 +185,16 @@ const App = () => {
 			console.log('========== User connected ===============');
 			console.log(data);
 			console.log('========== User connected ===============');
-			setOnlineUsers(data.onlineUsers);
 		});
 
 		socketRef.current.on('Joined ChatRoom', (data) => {
+			const { chatRoomId, messages } = data;
 			console.log('========== Joined ChatRoom ===============');
 			console.log(data);
+			setSelectedChatRoomId(chatRoomId);
+			if (messages.length) {
+				setMessages(messages);
+			}
 			console.log('========== Joined ChatRoom ===============');
 		});
 
@@ -204,9 +211,7 @@ const App = () => {
 	function sendMessage(e) {
 		e.preventDefault();
 
-		let chatRoom = prompt('Your chatRoom Id');
-
-		if (!chatRoom) {
+		if (!selectedChatRoomId) {
 			alert('Message not sent as no chatRoom id is provided');
 			return;
 		}
@@ -228,7 +233,7 @@ const App = () => {
 			messageObject = {
 				content: message,
 				receiver: selectedUser._id,
-				chatRoom,
+				chatRoom: selectedChatRoomId,
 			};
 		}
 
@@ -266,11 +271,18 @@ const App = () => {
 	return (
 		<Page>
 			<SelectedUserForChat>
-				<h3>Selected ChatRoom User</h3>
-				{selectedUser && (
+				<h3>Selected ChatRoom</h3>
+				{selectedUser && selectedChatRoomId && (
 					<div>
-						<h4>{selectedUser._id}</h4>
-						<h4>{selectedUser.name}</h4>
+						<h4>
+							<small>RoomId :-</small> {selectedChatRoomId}
+						</h4>
+						<h4>
+							<small>UserID :-</small> {selectedUser._id}
+						</h4>
+						<h4>
+							<small>Name :-</small> {selectedUser.username}
+						</h4>
 					</div>
 				)}
 			</SelectedUserForChat>
@@ -285,7 +297,7 @@ const App = () => {
 				</div>
 				<Container>
 					{messages.map((message, index) => {
-						if (message.sender === userID) {
+						if (message.sender === userID || message.sender._id === userID) {
 							return (
 								<MyRow key={index}>
 									{message.type === 'file' ? (
@@ -332,14 +344,12 @@ const App = () => {
 				</Form>
 			</ChatBox>
 			<UsersList>
-				<h3>Online Users</h3>
-				{Object.values(onlineUsers)
-					.filter((u) => u._id !== userID)
-					.map((user) => (
-						<li key={user._id} onClick={() => handleSelectedUser(user)}>
-							{user.name}
-						</li>
-					))}
+				<h3>Users I am Following</h3>
+				{myFollowings.map((user) => (
+					<li key={user._id} onClick={() => handleSelectedUser(user)}>
+						{user.username}
+					</li>
+				))}
 			</UsersList>
 		</Page>
 	);
