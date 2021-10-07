@@ -348,6 +348,11 @@ const App = () => {
 				{myFollowings.map((user) => (
 					<li key={user._id} onClick={() => handleSelectedUser(user)}>
 						{user.username}
+						{user.online ? (
+							<span style={{ marginLeft: '10px', color: 'green' }}>online</span>
+						) : (
+							<span style={{ marginLeft: '10px', color: 'red' }}>offline</span>
+						)}
 					</li>
 				))}
 			</UsersList>
