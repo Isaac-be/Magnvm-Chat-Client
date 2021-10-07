@@ -143,6 +143,7 @@ const App = () => {
 	const [myFollowings, setMyFollowings] = useState([]);
 	const [selectedUser, setSelectedUser] = useState(null);
 	const [selectedChatRoomId, setSelectedChatRoomId] = useState(null);
+	const [newConnectedUserId, setNewConnectedUserId] = useState(null);
 	const [messages, setMessages] = useState([]);
 	const [message, setMessage] = useState('');
 	const [file, setFile] = useState(null);
@@ -181,10 +182,12 @@ const App = () => {
 			console.log('Socket', socketRef);
 		});
 
-		socketRef.current.on('user connected', (data) => {
+		socketRef.current.on('New FollowingTo Connected', (newConnectionId) => {
 			console.log('========== User connected ===============');
-			console.log(data);
+			console.log(newConnectionId);
+			console.log(myFollowings);
 			console.log('========== User connected ===============');
+			setNewConnectedUserId(newConnectionId);
 		});
 
 		socketRef.current.on('Joined ChatRoom', (data) => {
@@ -267,6 +270,24 @@ const App = () => {
 			status: messageStatus ? false : true,
 		});
 	};
+
+	useEffect(() => {
+		if (newConnectedUserId) {
+			let updatedFollowings = myFollowings.filter((followee) => {
+				console.log(followee);
+				if (followee._id === newConnectedUserId) {
+					followee.online = true;
+				}
+
+				return followee;
+			});
+
+			console.log(updatedFollowings);
+
+			setMyFollowings(updatedFollowings);
+			setNewConnectedUserId(null);
+		}
+	}, [newConnectedUserId]);
 
 	return (
 		<Page>
