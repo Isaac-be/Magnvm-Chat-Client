@@ -143,7 +143,7 @@ const App = () => {
 	const [myFollowings, setMyFollowings] = useState([]);
 	const [selectedUser, setSelectedUser] = useState(null);
 	const [selectedChatRoomId, setSelectedChatRoomId] = useState(null);
-	const [newConnectedUserId, setNewConnectedUserId] = useState(null);
+	const [connectionUserChange, setConnectionUserChange] = useState(null);
 	const [messages, setMessages] = useState([]);
 	const [message, setMessage] = useState('');
 	const [file, setFile] = useState(null);
@@ -182,12 +182,11 @@ const App = () => {
 			console.log('Socket', socketRef);
 		});
 
-		socketRef.current.on('New FollowingTo Connected', (newConnectionId) => {
-			console.log('========== User connected ===============');
-			console.log(newConnectionId);
-			console.log(myFollowings);
-			console.log('========== User connected ===============');
-			setNewConnectedUserId(newConnectionId);
+		socketRef.current.on('Update Connection Status', (connectionUserChange) => {
+			console.log('========== User connection Status Changed ===============');
+			console.log(connectionUserChange);
+			console.log('========== User connection Status Changed ===============');
+			setConnectionUserChange(connectionUserChange);
 		});
 
 		socketRef.current.on('Joined ChatRoom', (data) => {
@@ -195,7 +194,7 @@ const App = () => {
 			console.log('========== Joined ChatRoom ===============');
 			console.log(data);
 			setSelectedChatRoomId(chatRoomId);
-			if (messages.length) {
+			if (messages && messages.length) {
 				setMessages(messages);
 			}
 			console.log('========== Joined ChatRoom ===============');
@@ -272,11 +271,12 @@ const App = () => {
 	};
 
 	useEffect(() => {
-		if (newConnectedUserId) {
+		if (connectionUserChange) {
+			const { _id, status } = connectionUserChange;
 			let updatedFollowings = myFollowings.filter((followee) => {
 				console.log(followee);
-				if (followee._id === newConnectedUserId) {
-					followee.online = true;
+				if (followee._id === _id) {
+					followee.online = status;
 				}
 
 				return followee;
@@ -285,9 +285,9 @@ const App = () => {
 			console.log(updatedFollowings);
 
 			setMyFollowings(updatedFollowings);
-			setNewConnectedUserId(null);
+			setConnectionUserChange(null);
 		}
-	}, [newConnectedUserId]);
+	}, [connectionUserChange]);
 
 	return (
 		<Page>
