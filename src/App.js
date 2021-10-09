@@ -43,9 +43,10 @@ const UsersList = styled.ul`
 	text-align: center;
 	li {
 		cursor: pointer;
-		background-color: #a3acc9;
+		background-color: #1e1f22;
 		margin-bottom: 10px;
 		padding: 10px;
+		font-weight: 200;
 	}
 `;
 
@@ -103,7 +104,6 @@ const MyRow = styled.div`
 `;
 
 const MyMessage = styled.div`
-	width: 45%;
 	background-color: pink;
 	color: #46516e;
 	padding: 10px;
@@ -118,7 +118,6 @@ const PartnerRow = styled(MyRow)`
 `;
 
 const PartnerMessage = styled.div`
-  width: 45%;
   background-color: transparent;
   color: lightgray;
   border: 1px solid lightgray;
@@ -146,6 +145,8 @@ const App = () => {
 	const [connectionUserChange, setConnectionUserChange] = useState(null);
 	const [messages, setMessages] = useState([]);
 	const [message, setMessage] = useState('');
+	const [updatedMessage, setUpdatedMessage] = useState(null);
+	const [deletedMessage, setDeletedMessage] = useState(null);
 	const [file, setFile] = useState(null);
 
 	const socketRef = useRef();
@@ -159,15 +160,9 @@ const App = () => {
 				authorization: token,
 			},
 		});
-		//
-
-		// socketRef.current.on('connect', () => {
-		// 	setUserID(socketRef.current.id);
-		// 	console.log('Socket', socketRef);
-		// });
 
 		socketRef.current.on('connectionSuccess', (data) => {
-			const { _id, username, socketId, followings } = data;
+			const { _id, username, socketId, connectionUsers } = data;
 
 			console.log('========== Connection Success ===============');
 			console.log('Socket', socketRef);
@@ -177,7 +172,7 @@ const App = () => {
 			setUserID(_id);
 			setSocketId(socketId);
 			setName(username);
-			setMyFollowings(followings);
+			setMyFollowings(connectionUsers);
 
 			console.log('Socket', socketRef);
 		});
@@ -194,15 +189,25 @@ const App = () => {
 			console.log('========== Joined ChatRoom ===============');
 			console.log(data);
 			setSelectedChatRoomId(chatRoomId);
-			if (messages && messages.length) {
-				setMessages(messages);
-			}
+			setMessages(messages);
 			console.log('========== Joined ChatRoom ===============');
 		});
 
 		socketRef.current.on('message', (message) => {
 			console.log('message received:-', message);
 			receivedMessage(message);
+		});
+
+		socketRef.current.on('Message Updated', (updatedMsg) => {
+			const { _id, chatRoom } = updatedMsg;
+			console.log('Some updated message received so saving in DB', updatedMsg);
+			setUpdatedMessage(updatedMsg);
+		});
+
+		socketRef.current.on('Message Deleted', (deletedMsgData) => {
+			const { _id, chatRoom } = deletedMsgData;
+			console.log(`Some message deleted`, deletedMsgData);
+			setDeletedMessage(deletedMsgData);
 		});
 	}, []);
 
@@ -266,8 +271,12 @@ const App = () => {
 		console.log(messageStatus);
 		socketRef.current.emit('update message', {
 			messageId,
-			status: messageStatus ? false : true,
+			status: messageStatus,
 		});
+	};
+
+	const deleteMessage = (msgId) => {
+		socketRef.current.emit('Delete Message', msgId);
 	};
 
 	useEffect(() => {
@@ -288,6 +297,37 @@ const App = () => {
 			setConnectionUserChange(null);
 		}
 	}, [connectionUserChange]);
+
+	useEffect(() => {
+		if (updatedMessage) {
+			const { _id, chatRoom } = updatedMessage;
+			if (chatRoom == selectedChatRoomId) {
+				console.log('Selected chatRoomId & updatedMessage chatRoom matched');
+				let updatedMessagesList = messages.filter((msg) => {
+					if (msg._id == _id) {
+						msg.seenAt = updatedMessage.seenAt;
+					}
+					return msg;
+				});
+				setMessages([...updatedMessagesList]);
+			}
+
+			setUpdatedMessage(null);
+		}
+	}, [updatedMessage]);
+
+	useEffect(() => {
+		if (deletedMessage) {
+			console.log('Deleted message data is ', deletedMessage);
+			const { _id, chatRoom } = deletedMessage;
+
+			if (chatRoom === selectedChatRoomId) {
+				let updatedMessages = messages.filter((msg) => msg._id !== _id);
+				setMessages(updatedMessages);
+			}
+			setDeletedMessage(null);
+		}
+	}, [deletedMessage]);
 
 	return (
 		<Page>
@@ -324,7 +364,20 @@ const App = () => {
 									{message.type === 'file' ? (
 										<ImageMsg message={message} />
 									) : (
-										<MyMessage>{message.content}</MyMessage>
+										<MyMessage>
+											<span className='sender'>Me</span>
+											<span>{'>>'} </span>
+											{message.content}
+											<span style={{ marginLeft: '10px', color: 'green' }}>
+												{message.seenAt ? 'seen' : 'not seen yet'}
+											</span>
+											<button
+												className='delete-btn'
+												onClick={() => deleteMessage(message._id)}
+											>
+												Delete
+											</button>
+										</MyMessage>
 									)}
 								</MyRow>
 							);
@@ -335,19 +388,24 @@ const App = () => {
 									<ImageMsg message={message} />
 								) : (
 									<PartnerMessage>
+										<span className='sender'>{message.sender.username}</span>
+										<span>{'>>'} </span>
 										{message.content}
-										<button
-											onClick={() => updateMessage(message._id, null)}
-											style={{ marginLeft: '10px', color: 'green' }}
-										>
-											Mark As Read
-										</button>
-										<button
-											onClick={() => updateMessage(message._id, 123)}
-											style={{ marginLeft: '10px', color: 'green' }}
-										>
-											Mark As Unread
-										</button>
+										{message.seenAt ? (
+											<button
+												onClick={() => updateMessage(message._id, false)}
+												className='change-status'
+											>
+												Mark As Unread
+											</button>
+										) : (
+											<button
+												onClick={() => updateMessage(message._id, true)}
+												className='change-status'
+											>
+												Mark As Read
+											</button>
+										)}
 									</PartnerMessage>
 								)}
 							</PartnerRow>
@@ -365,14 +423,26 @@ const App = () => {
 				</Form>
 			</ChatBox>
 			<UsersList>
-				<h3>Users I am Following</h3>
+				<h3>Users I am Following or NonFollowings with whom chatRooms exist</h3>
 				{myFollowings.map((user) => (
 					<li key={user._id} onClick={() => handleSelectedUser(user)}>
 						{user.username}
 						{user.online ? (
-							<span style={{ marginLeft: '10px', color: 'green' }}>online</span>
+							<span
+								style={{
+									marginLeft: '10px',
+									color: 'green',
+									fontWeight: '400',
+								}}
+							>
+								online
+							</span>
 						) : (
-							<span style={{ marginLeft: '10px', color: 'red' }}>offline</span>
+							<span
+								style={{ marginLeft: '10px', color: 'red', fontWeight: '400' }}
+							>
+								offline
+							</span>
 						)}
 					</li>
 				))}

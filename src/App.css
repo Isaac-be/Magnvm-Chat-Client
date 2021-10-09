@@ -5,9 +5,40 @@
 	background-color: #46516e;
 }
 
+* {
+	font-weight: 300;
+}
+
 input,
 button {
 	margin: 10px;
 	padding: 5px;
 	border: 1px solid;
+}
+.sender {
+	margin-right: 10px;
+	border: 1px solid #1024f1;
+	padding: 5px;
+	background: cornflowerblue;
+	color: white;
+}
+.change-status {
+	margin-left: 10px;
+	cursor: pointer;
+	color: green;
+}
+.change-status:hover {
+	background: green;
+	color: white;
+}
+
+.delete-btn {
+	background: transparent;
+	border-color: red;
+	color: red;
+	cursor: pointer;
+}
+.delete-btn:hover {
+	color: white;
+	background: red;
 }
