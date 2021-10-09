@@ -279,6 +279,12 @@ const App = () => {
 		socketRef.current.emit('Delete Message', msgId);
 	};
 
+	const muteChatRoom = () => {
+		console.log(`Muting chatRoom with Id ${selectedChatRoomId}`);
+
+		socketRef.current.emit('Mute ChatRoom', selectedChatRoomId);
+	};
+
 	useEffect(() => {
 		if (connectionUserChange) {
 			const { _id, status } = connectionUserChange;
@@ -344,6 +350,9 @@ const App = () => {
 						<h4>
 							<small>Name :-</small> {selectedUser.username}
 						</h4>
+						<button className='delete-btn' onClick={muteChatRoom}>
+							Mute This Chat
+						</button>
 					</div>
 				)}
 			</SelectedUserForChat>
