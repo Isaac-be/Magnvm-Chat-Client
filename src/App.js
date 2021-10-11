@@ -209,6 +209,11 @@ const App = () => {
 			console.log(`Some message deleted`, deletedMsgData);
 			setDeletedMessage(deletedMsgData);
 		});
+
+		socketRef.current.on('ChatRoom Status Updated', (chatRoomUpdateData) => {
+			const { status, chatRoomId } = chatRoomUpdateData;
+			console.log('ChatRoom status updated', chatRoomUpdateData);
+		});
 	}, []);
 
 	function receivedMessage(message) {
@@ -285,6 +290,10 @@ const App = () => {
 		socketRef.current.emit('Mute ChatRoom', selectedChatRoomId);
 	};
 
+	const unmuteChatRoom = () => {
+		socketRef.current.emit('Unmute ChatRoom', selectedChatRoomId);
+	};
+
 	useEffect(() => {
 		if (connectionUserChange) {
 			const { _id, status } = connectionUserChange;
@@ -352,6 +361,9 @@ const App = () => {
 						</h4>
 						<button className='delete-btn' onClick={muteChatRoom}>
 							Mute This Chat
+						</button>
+						<button className='delete-btn' onClick={unmuteChatRoom}>
+							Unmute This Chat
 						</button>
 					</div>
 				)}
